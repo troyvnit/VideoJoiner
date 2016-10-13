@@ -28,6 +28,7 @@ namespace VideoJoiner
         {
             _hubContext.Clients.All.monthlyRainFall(VideoJoinerData.GetChartDataForVideoJoiner());
             _hubContext.Clients.All.customerInformations(VideoJoinerData.GetCustomerInformations());
+            _hubContext.Clients.All.videoJoinerInfos(VideoJoinerData.GetVideoJoinerInfos());
         }
         private void OnTimerElapsed1(object sender)
         {

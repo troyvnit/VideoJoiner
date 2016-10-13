@@ -17,11 +17,14 @@ namespace VideoJoiner.Hubs
     [HubName("MyHub")]
     public class MyHub : Hub
     {
+        private CancellationTokenSource _cts;
+
         public async Task StartVideoJoiner()
         {
-            var cts = new CancellationTokenSource();
             try
             {
+                _cts = new CancellationTokenSource();
+
                 await Task.Run(async () =>
                  {
                      using (var db = new VideoJoinerContext())
@@ -29,12 +32,17 @@ namespace VideoJoiner.Hubs
                          var videos = await db.Videos.ToListAsync();
                          JoinerUtility.Join(videos);
                      }
-                 }, cts.Token);
+                 }, _cts.Token);
             }
             catch (Exception e)
             {
-                cts.Cancel();
+                _cts.Cancel();
             }
+        }
+
+        public void StopVideoJoiner()
+        {
+            _cts.Cancel();
         }
     }
 }

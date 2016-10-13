@@ -14,7 +14,7 @@ namespace VideoJoiner.Controllers
             return View();
         }
 
-        public ActionResult Customer()
+        public ActionResult VideoJoiner()
         {
             return View();
         }

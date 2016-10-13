@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Web;
+using Dashboard.Models;
 using VideoJoiner.Controllers;
 using VideoJoiner.Hubs;
 using VideoJoiner.Models;
 using Microsoft.AspNet.SignalR;
 using Microsoft.AspNet.SignalR.Hubs;
+using VideoJoiner.DataAccess;
 
 namespace VideoJoiner.Utility
 {
@@ -98,6 +100,21 @@ namespace VideoJoiner.Utility
                 TopRatedCustomers = RandomIntNumberBetween(300, 1500).ToString(),
                 PendingToApprove = RandomIntNumberBetween(10, 500).ToString(),
             };
+        }
+
+        public static VideoJoinerInfos GetVideoJoinerInfos()
+        {
+            var videoJoinerInfos = new VideoJoinerInfos();
+            using (var db = new VideoJoinerContext())
+            {
+                var videos = db.Videos.ToList();
+                videoJoinerInfos.TotalVideos = videos.Count();
+                videoJoinerInfos.TotalUnhandledVideos = videos.Count(v => v.Status == Status.Unhandled);
+                videoJoinerInfos.TotalFailedVideos = videos.Count(v => v.Status == Status.Failed);
+                videoJoinerInfos.TotalCompletedVideos = videos.Count(v => v.Status == Status.Completed);
+                videoJoinerInfos.Videos = videos;
+            }
+            return videoJoinerInfos;
         }
         #endregion
     }

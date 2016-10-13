@@ -1,3 +1,6 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+
 namespace VideoJoiner.DataAccess
 {
     using System;
@@ -20,8 +23,10 @@ namespace VideoJoiner.DataAccess
         [StringLength(500)]
         public string ReuploadedLink { get; set; }
 
+        [JsonConverter(typeof(StringEnumConverter))]
         public Progress Progress { get; set; }
 
+        [JsonConverter(typeof(StringEnumConverter))]
         public Status Status { get; set; }
 
         public string Note { get; set; }

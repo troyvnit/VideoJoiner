@@ -166,7 +166,7 @@
     <Compile Include="DataAccess\VideoJoinerContext.cs" />
     <Compile Include="Models\CustomerInformations.cs" />
     <Compile Include="Models\RamCpu.cs" />
-    <Compile Include="Models\VideoDto.cs" />
+    <Compile Include="Models\VideoJoinerInfos.cs" />
     <Compile Include="Utility\BackgroundServerTimeTimer.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Global.asax.cs">
@@ -175,7 +175,7 @@
     <Compile Include="Hubs\MyHub.cs" />
     <Compile Include="Models\Graph.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Utility\DashboardData.cs" />
+    <Compile Include="Utility\VideoJoinerData.cs" />
     <Compile Include="Utility\JoinerUtility.cs" />
     <Compile Include="Utility\ServerPerformanceUtility.cs" />
   </ItemGroup>
@@ -1156,7 +1156,7 @@
     <Content Include="Views\Home\Index.cshtml" />
     <Content Include="Scripts\Jquery\jquery-1.10.2.min.map" />
     <Content Include="Views\Home\Content.cshtml" />
-    <Content Include="Views\Home\Customer.cshtml" />
+    <Content Include="Views\Home\VideoJoiner.cshtml" />
     <Content Include="Views\Home\ServerPerformance.cshtml" />
     <Content Include="Views\Login\Index.cshtml" />
     <Content Include="Scripts\version.json" />
