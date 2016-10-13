@@ -9,9 +9,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
 using Dashboard.Models;
 using VideoJoiner.DataAccess;
 using YoutubeExtractor;
+using Video = VideoJoiner.DataAccess.Video;
 
 namespace Dashboard.Utility
 {
@@ -27,69 +30,68 @@ namespace Dashboard.Utility
                 var cts = new CancellationTokenSource();
                 Task.Run(() =>
                 {
-                    UpdateVideo(video, Progress.Downloading);
-                    IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(video.SourceLink);
-                    
-                    VideoInfo videoInfo = videoInfos
-                        .First(info => info.VideoType == VideoType.Mp4);
-                    
-                    if (videoInfo.RequiresDecryption)
+                    try
                     {
-                        DownloadUrlResolver.DecryptDownloadUrl(videoInfo);
-                    }
+                        UpdateVideo(video, Progress.Downloading);
+                        IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(video.SourceLink);
 
-                    var originalVideo = $"{videoInfo.Title.GenerateSlug()}{videoInfo.VideoExtension}";
-                    var watermarkVideo = $"{videoInfo.Title.GenerateSlug()}_Watermark{videoInfo.VideoExtension}";
-                    var joinedVideo = $"{videoInfo.Title.GenerateSlug()}_Joined{videoInfo.VideoExtension}";
+                        VideoInfo videoInfo = videoInfos
+                            .First(info => info.VideoType == VideoType.Mp4);
 
-                    if (File.Exists(Path.Combine(AppDataPath, originalVideo)))
-                    {
-                        File.Delete(Path.Combine(AppDataPath, originalVideo));
-                    }
-                    if (File.Exists(Path.Combine(AppDataPath, watermarkVideo)))
-                    {
-                        File.Delete(Path.Combine(AppDataPath, watermarkVideo));
-                    }
-                    if (File.Exists(Path.Combine(AppDataPath, joinedVideo)))
-                    {
-                        File.Delete(Path.Combine(AppDataPath, joinedVideo));
-                    }
-                    var videoDownloader = new VideoDownloader(videoInfo, Path.Combine(AppDataPath, originalVideo));
-                    
-                    videoDownloader.DownloadProgressChanged += (sender, a) => System.Console.WriteLine(a.ProgressPercentage);
-
-                    videoDownloader.DownloadFinished += (sender, eventArgs) =>
-                    {
-                        try
+                        if (videoInfo.RequiresDecryption)
                         {
-                            UpdateVideo(video, Progress.Downloaded);
-                            UpdateVideo(video, Progress.Joining);
+                            DownloadUrlResolver.DecryptDownloadUrl(videoInfo);
+                        }
+
+                        var originalVideo = Path.Combine(AppDataPath, $"{videoInfo.Title.GenerateSlug()}{videoInfo.VideoExtension}");
+                        var watermarkVideo = Path.Combine(AppDataPath, $"{videoInfo.Title.GenerateSlug()}_Watermark{videoInfo.VideoExtension}");
+                        var joinedVideo = Path.Combine(AppDataPath, $"{videoInfo.Title.GenerateSlug()}_Joined{videoInfo.VideoExtension}");
+
+                        if (File.Exists(originalVideo))
+                        {
+                            File.Delete(originalVideo);
+                        }
+                        if (File.Exists(watermarkVideo))
+                        {
+                            File.Delete(watermarkVideo);
+                        }
+                        if (File.Exists(joinedVideo))
+                        {
+                            File.Delete(joinedVideo);
+                        }
+                        var videoDownloader = new VideoDownloader(videoInfo, Path.Combine(AppDataPath, originalVideo));
+
+                        videoDownloader.DownloadProgressChanged += (sender, a) => System.Console.WriteLine(a.ProgressPercentage);
+
+                        videoDownloader.DownloadFinished += (sender, eventArgs) =>
+                        {
+                            UpdateVideo(video, Progress.Downloaded, video.Status);
+                            UpdateVideo(video, Progress.Joining, video.Status);
                             MakeWatermark(video, originalVideo, watermarkVideo);
                             Concat(video, watermarkVideo, joinedVideo);
-                            UpdateVideo(video, Progress.Joined);
-                            UpdateVideo(video, video.Progress, Status.Completed);
+                            UploadVideo(video, joinedVideo);
                             cts.Cancel();
-                        }
-                        catch (Exception e)
-                        {
-                            UpdateVideo(video, video.Progress, Status.Failed, e.InnerException?.Message);
-                            cts.Cancel();
-                        }
-                    };
-                    
-                    videoDownloader.Execute();
+                        };
+
+                        videoDownloader.Execute();
+                    }
+                    catch (Exception e)
+                    {
+                        UpdateVideo(video, video.Progress, Status.Failed, e.InnerException?.Message);
+                        cts.Cancel();
+                    }
                 }, cts.Token);
             }
         }
 
         private static void MakeWatermark(Video video, string originalVideo, string watermarkVideo)
         {
-            var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
-            var content = Path.Combine(AppDataPath, originalVideo);
-            var output = Path.Combine(AppDataPath, watermarkVideo);
             Process ffmpegProcess = new Process();
             try
             {
+                var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
+                var content = Path.Combine(AppDataPath, originalVideo);
+                var output = Path.Combine(AppDataPath, watermarkVideo);
                 var logo = Path.Combine(AppDataPath, "vui.png");
                 ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {content} -i {logo} -filter_complex \"overlay=main_w-overlay_w-10:10\" {output}");
                 ffmpeg_StartInfo.UseShellExecute = false;
@@ -110,10 +112,6 @@ namespace Dashboard.Utility
                 ffmpegProcess.BeginOutputReadLine();
                 ffmpegProcess.BeginErrorReadLine();
                 ffmpegProcess.WaitForExit();
-                ffmpegProcess.Exited += (sender, args) =>
-                {
-                    
-                };
                 ffmpegProcess.Close();
                 ffmpegProcess.Dispose();
                 ffmpegProcess = null;
@@ -123,21 +121,21 @@ namespace Dashboard.Utility
                 ffmpegProcess.Close();
                 ffmpegProcess.Dispose();
                 ffmpegProcess = null;
-                UpdateVideo(video, video.Progress, Status.Failed, ex.InnerException?.Message);
+                UpdateVideo(video, Progress.Downloaded, Status.Failed, ex.InnerException?.Message);
             }
         }
 
         private static void Concat(Video video, string watermarkVideo, string joinedVideo)
         {
-            var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
-            var introStart = Path.Combine(AppDataPath, "IntroStart.mp4");
-            var introEnd = Path.Combine(AppDataPath, "IntroEnd.mp4");
-            var content = Path.Combine(AppDataPath, watermarkVideo);
-            var output = Path.Combine(AppDataPath, joinedVideo);
             Process ffmpegProcess = new Process();
             try
             {
-                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0:0] [0:1] [1:0] [1:1] [2:0] [2:1] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");              
+                var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
+                var introStart = Path.Combine(AppDataPath, "IntroStart.mp4");
+                var introEnd = Path.Combine(AppDataPath, "IntroEnd.mp4");
+                var content = Path.Combine(AppDataPath, watermarkVideo);
+                var output = Path.Combine(AppDataPath, joinedVideo);
+                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0:0] [0:1] [1:0] [1:1] [2:0] [2:1] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");
                 ffmpeg_StartInfo.UseShellExecute = false;
                 ffmpeg_StartInfo.RedirectStandardError = true;
                 ffmpeg_StartInfo.RedirectStandardOutput = true;
@@ -159,13 +157,42 @@ namespace Dashboard.Utility
                 ffmpegProcess.Close();
                 ffmpegProcess.Dispose();
                 ffmpegProcess = null;
+                UpdateVideo(video, Progress.Joined);
             }
             catch (Exception ex)
             {
                 ffmpegProcess.Close();
                 ffmpegProcess.Dispose();
                 ffmpegProcess = null;
-                UpdateVideo(video, video.Progress, Status.Failed, ex.InnerException?.Message);
+                UpdateVideo(video, Progress.Downloaded, Status.Failed, ex.InnerException?.Message);
+            }
+        }
+
+        private static void UploadVideo(Video video, string joinedVideo)
+        {
+            Account account = new Account("luffylee", "137436254318477", "La9ZSA2KmHxnVETfJ4N5xpp84fQ");
+
+            Cloudinary cloudinary = new Cloudinary(account);
+            var videoUploadParams = new VideoUploadParams()
+            {
+                File = new FileDescription(joinedVideo)
+            };
+            try
+            {
+                var result = cloudinary.Upload(videoUploadParams);
+                if (result.Error == null)
+                {
+                    video.ReuploadedLink = result.Uri.AbsoluteUri;
+                    UpdateVideo(video, Progress.Uploaded, Status.Completed);
+                }
+                else
+                {
+                    UpdateVideo(video, Progress.Joined, Status.Failed, result.Error.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                UpdateVideo(video, Progress.Joined, Status.Failed, ex.InnerException?.Message);
             }
         }
 
