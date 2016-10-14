@@ -13,6 +13,7 @@ namespace VideoJoiner.DataAccess
         }
 
         public virtual DbSet<Video> Videos { get; set; }
+        public virtual DbSet<Setting> Settings { get; set; }
 
         protected override void OnModelCreating(DbModelBuilder modelBuilder)
         {

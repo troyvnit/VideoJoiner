@@ -1,0 +1,35 @@
+﻿<div class="row" ng-controller="settingController">
+    <div class="col-md-6">
+      <div class="panel panel-default">
+        <div class="panel-heading">
+          <div class="panel-title">
+            <i class="glyphicon glyphicon-chevron-up chevron"></i>
+            <i class="glyphicon glyphicon-wrench pull-right"></i>
+            Setting
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="form form-vertical">
+            <div class="control-group" ng-repeat="setting in settings">
+              <label>{{setting.SettingLabel}}</label>
+              <div class="controls">
+                <input type="text" class="form-control" ng-model="setting.SettingValue" placeholder="{{setting.SettingPlaceholder}}">
+              </div>
+            </div>
+            <div class="control-group">
+              <label></label>
+              <div class="controls">
+                <button type="button" class="btn btn-primary" ng-click="saveSettings()">
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div><!--/panel content-->
+      </div><!--/panel-->
+    </div>
+    <div class="col-md-6">
+        
+    </div>
+</div>

@@ -5,6 +5,7 @@ videoJoinerApp.service('chartdataService', ['$rootScope', '$http', chartdataServ
 videoJoinerApp.factory('signalRHubProxy', ['$rootScope', signalRHubProxy]);
 
 videoJoinerApp.controller('dashboardController', ['$scope', '$log', dashboardController]);
+videoJoinerApp.controller('settingController', ['$scope', '$http', settingController]);
 videoJoinerApp.controller('videoController', ['$scope', 'signalRHubProxy', videoController]);
 videoJoinerApp.controller('chartController', ['$scope', '$log', '$timeout', '$interval', 'chartdataService', 'signalRHubProxy', chartController]);
 videoJoinerApp.controller('piechartController', ['$scope', '$log', '$timeout', piechartController]);

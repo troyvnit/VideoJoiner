@@ -29,10 +29,21 @@ namespace Dashboard.Utility
             ? System.Web.Hosting.HostingEnvironment.MapPath("~/App_Data/")
             : System.Web.HttpContext.Current.Server.MapPath("~/App_Data/");
 
-        private static readonly string AccessToken = "EAADf2zAo0GkBAD5lRZAmPE5JOUTzrlZAZBziEs44mMd7UNzoPwtAgE6hG25b4cXj9TiVXnAYZBxw96XeDLOcZCkDbFuuJqPhqkKkPSu2sa2LZCCokOBs1tk0PjXOhtlRT0n1ry0OSuVQtLolLyHOW4zxLNM2wqzxYZD";
+        private static string _fbAccessToken;
+        private static string _cloudName;
+        private static string _apiKey;
+        private static string _apiSecret;
 
         public static void Join(List<Video> videos)
         {
+            using (var db = new VideoJoinerContext())
+            {
+                var settings = db.Settings.ToList();
+                _fbAccessToken = settings.FirstOrDefault(s => s.SettingKey == "FacebookAccessToken")?.SettingValue;
+                _cloudName = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryCloudName")?.SettingValue;
+                _apiKey = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiKey")?.SettingValue;
+                _apiSecret = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiSecret")?.SettingValue;
+            }
             foreach (var video in videos)
             {
                 var cts = new CancellationTokenSource();
@@ -98,7 +109,7 @@ namespace Dashboard.Utility
 
                                     var resultString =
                                         webClient.DownloadString(
-                                            $"https://graph.facebook.com/v2.8/{fbVideoId}?fields=source%2Ctitle&access_token={AccessToken}");
+                                            $"https://graph.facebook.com/v2.8/{fbVideoId}?fields=source%2Ctitle&access_token={_fbAccessToken}");
 
                                     var result = JsonConvert.DeserializeObject<FacebookVideoInfo>(resultString);
 
@@ -270,7 +281,7 @@ namespace Dashboard.Utility
         {
             UpdateVideo(video, Progress.Uploading, video.Status);
 
-            Account account = new Account("luffylee", "137436254318477", "La9ZSA2KmHxnVETfJ4N5xpp84fQ");
+            Account account = new Account(_cloudName, _apiKey, _apiSecret);
 
             Cloudinary cloudinary = new Cloudinary(account);
 

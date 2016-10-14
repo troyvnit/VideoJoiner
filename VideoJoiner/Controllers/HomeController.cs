@@ -1,10 +1,12 @@
-﻿using System.Web.Mvc;
+﻿using System.Linq;
+using System.Web.Mvc;
+using VideoJoiner.DataAccess;
 
 namespace VideoJoiner.Controllers
 {
     public class HomeController : Controller
     {
-        public ActionResult Index()
+        public ActionResult Setting()
         {
             return View();
         }
