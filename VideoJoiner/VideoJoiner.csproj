@@ -165,6 +165,7 @@
     <Compile Include="DataAccess\Video.cs" />
     <Compile Include="DataAccess\VideoJoinerContext.cs" />
     <Compile Include="Models\CustomerInformations.cs" />
+    <Compile Include="Models\FacebookVideoInfo.cs" />
     <Compile Include="Models\RamCpu.cs" />
     <Compile Include="Models\VideoJoinerInfos.cs" />
     <Compile Include="Utility\BackgroundServerTimeTimer.cs" />

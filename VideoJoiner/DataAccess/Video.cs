@@ -43,6 +43,6 @@ namespace VideoJoiner.DataAccess
 
     public enum Status
     {
-        Unhandled, Failed, Completed
+        Unhandled, Handling, Failed, Completed
     }
 }

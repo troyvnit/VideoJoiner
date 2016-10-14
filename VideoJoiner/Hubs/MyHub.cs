@@ -36,13 +36,13 @@ namespace VideoJoiner.Hubs
             }
             catch (Exception e)
             {
-                _cts.Cancel();
+                _cts?.Cancel();
             }
         }
 
         public void StopVideoJoiner()
         {
-            _cts.Cancel();
+            _cts?.Cancel();
         }
     }
 }

@@ -52,10 +52,10 @@
       <div class="panel-heading">Videos</div>
       <table class="table table-striped">
         <thead>
-        <tr><th>Id</th><th>Title</th><th>Source Link</th><th>Reuploaded Link</th><th>Progress</th><th>Status</th></tr>
+        <tr><th>Id</th><th>Title</th><th>Source Link</th><th>Reuploaded Link</th><th>Progress</th><th>Status</th><th>Note</th></tr>
         </thead>
         <tbody>
-        <tr ng-repeat="video in VideoJoinerInfos.Videos"><td>{{video.Id}}</td><td>{{video.VideoTitle}}</td><td>{{video.SourceLink}}</td><td>{{video.ReuploadedLink}}</td><td>{{video.Progress}}</td><td>{{video.Status}}</td></tr>
+        <tr ng-repeat="video in VideoJoinerInfos.Videos"><td>{{video.Id}}</td><td>{{video.VideoTitle}}</td><td>{{video.SourceLink}}</td><td>{{video.ReuploadedLink}}</td><td>{{video.Progress}}</td><td>{{video.Status}}</td><td>{{video.Note}}</td></tr>
         </tbody>
       </table>
     </div><!--/panel-->
