@@ -29,7 +29,10 @@ namespace VideoJoiner.Hubs
                  {
                      using (var db = new VideoJoinerContext())
                      {
-                         var videos = await db.Videos.ToListAsync();
+                         var settings = await db.Settings.ToListAsync();
+                         var totalSetting = settings.FirstOrDefault(s => s.SettingKey == "TotalVideosPerSession");
+                         var take = totalSetting != null ? int.Parse(totalSetting.SettingValue) : 2;
+                         var videos = await db.Videos.Where(v => v.Status != Status.Completed).Take(take).ToListAsync();
                          JoinerUtility.Join(videos);
                      }
                  }, _cts.Token);

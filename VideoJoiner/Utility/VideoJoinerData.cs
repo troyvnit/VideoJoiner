@@ -107,12 +107,12 @@ namespace VideoJoiner.Utility
             var videoJoinerInfos = new VideoJoinerInfos();
             using (var db = new VideoJoinerContext())
             {
-                var videos = db.Videos.ToList();
+                var videos = db.Videos;
                 videoJoinerInfos.TotalVideos = videos.Count();
                 videoJoinerInfos.TotalUnhandledVideos = videos.Count(v => v.Status == Status.Unhandled);
                 videoJoinerInfos.TotalFailedVideos = videos.Count(v => v.Status == Status.Failed);
                 videoJoinerInfos.TotalCompletedVideos = videos.Count(v => v.Status == Status.Completed);
-                videoJoinerInfos.Videos = videos;
+                videoJoinerInfos.Videos = videos.Where(v => v.Status != Status.Completed).ToList();
             }
             return videoJoinerInfos;
         }

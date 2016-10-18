@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
@@ -15,6 +16,11 @@ using System.Threading.Tasks;
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Dashboard.Models;
+using Google.Apis.Auth.OAuth2;
+using Google.Apis.Services;
+using Google.Apis.Upload;
+using Google.Apis.YouTube.v3;
+using Google.Apis.YouTube.v3.Data;
 using Newtonsoft.Json;
 using VideoJoiner.DataAccess;
 using VideoJoiner.Models;
@@ -30,9 +36,12 @@ namespace Dashboard.Utility
             : System.Web.HttpContext.Current.Server.MapPath("~/App_Data/");
 
         private static string _fbAccessToken;
-        private static string _cloudName;
-        private static string _apiKey;
-        private static string _apiSecret;
+        //private static string _cloudName;
+        //private static string _apiKey;
+        //private static string _apiSecret;
+        private static string _youtubeClientId;
+        private static string _youtubeClientSecret;
+        private static string _youtubeUser;
 
         public static void Join(List<Video> videos)
         {
@@ -40,14 +49,17 @@ namespace Dashboard.Utility
             {
                 var settings = db.Settings.ToList();
                 _fbAccessToken = settings.FirstOrDefault(s => s.SettingKey == "FacebookAccessToken")?.SettingValue;
-                _cloudName = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryCloudName")?.SettingValue;
-                _apiKey = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiKey")?.SettingValue;
-                _apiSecret = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiSecret")?.SettingValue;
+                //_cloudName = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryCloudName")?.SettingValue;
+                //_apiKey = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiKey")?.SettingValue;
+                //_apiSecret = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiSecret")?.SettingValue;
+                _youtubeClientId = settings.FirstOrDefault(s => s.SettingKey == "YoutubeClientId")?.SettingValue;
+                _youtubeClientSecret = settings.FirstOrDefault(s => s.SettingKey == "YoutubeClientSecret")?.SettingValue; 
+                _youtubeUser = settings.FirstOrDefault(s => s.SettingKey == "YoutubeUser")?.SettingValue;
             }
             foreach (var video in videos)
             {
                 var cts = new CancellationTokenSource();
-                Task.Run(() =>
+                Task.Run(async () =>
                 {
                     try
                     {
@@ -62,6 +74,8 @@ namespace Dashboard.Utility
                             VideoInfo videoInfo = videoInfos
                                 .First(info => info.VideoType == VideoType.Mp4);
 
+                            video.VideoTitle = videoInfo.Title;
+
                             originalVideo = Path.Combine(AppDataPath,
                                 $"{videoInfo.Title.GenerateSlug()}.mp4");
 
@@ -73,7 +87,7 @@ namespace Dashboard.Utility
 
                             if (video.Progress >= Progress.Downloaded && File.Exists(originalVideo))
                             {
-                                RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
+                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
                                 return;
                             }
 
@@ -89,10 +103,10 @@ namespace Dashboard.Utility
                             videoDownloader.DownloadProgressChanged +=
                                 (sender, a) => System.Console.WriteLine(a.ProgressPercentage);
 
-                            videoDownloader.DownloadFinished += (sender, eventArgs) =>
+                            videoDownloader.DownloadFinished += async (sender, eventArgs) =>
                             {
-                                UpdateVideo(video, Progress.Downloaded, video.Status);
-                                RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
+                                UpdateVideo(video, Progress.Downloaded, Status.Handling);
+                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
                                 cts.Cancel();
                             };
 
@@ -109,12 +123,15 @@ namespace Dashboard.Utility
 
                                     var resultString =
                                         webClient.DownloadString(
-                                            $"https://graph.facebook.com/v2.8/{fbVideoId}?fields=source%2Ctitle&access_token={_fbAccessToken}");
+                                            $"https://graph.facebook.com/v2.8/{fbVideoId}?fields=source%2Ctitle%2Cdescription&access_token={_fbAccessToken}");
 
                                     var result = JsonConvert.DeserializeObject<FacebookVideoInfo>(resultString);
 
                                     if (result.Error == null)
                                     {
+                                        video.VideoTitle = result.Title;
+                                        video.Description = result.Description;
+
                                         originalVideo = Path.Combine(AppDataPath,
                                             $"{result.Title.GenerateSlug()}.mp4");
 
@@ -126,18 +143,17 @@ namespace Dashboard.Utility
 
                                         if (video.Progress >= Progress.Downloaded && File.Exists(originalVideo))
                                         {
-                                            RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
+                                            await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
                                             return;
                                         }
 
                                         UpdateVideo(video, Progress.Downloading, Status.Handling);
 
                                         webClient.DownloadFileAsync(new Uri(result.Source), originalVideo);
-                                        webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(
-                                            (sender, args) =>
+                                        webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(async (sender, args) =>
                                             {
-                                                UpdateVideo(video, Progress.Downloaded, video.Status);
-                                                RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
+                                                UpdateVideo(video, Progress.Downloaded, Status.Handling);
+                                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo);
                                                 cts.Cancel();
                                             });
                                     }
@@ -162,15 +178,16 @@ namespace Dashboard.Utility
             }
         }
 
-        private static void RunProcesses(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
+        private static async Task RunProcesses(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
         {
             if (!(video.Progress >= Progress.Joined && File.Exists(joinedVideo)))
             {
-                UpdateVideo(video, Progress.Joining, video.Status);
+                UpdateVideo(video, Progress.Joining, Status.Handling);
                 MakeWatermark(video, originalVideo, watermarkVideo);
                 Concat(video, watermarkVideo, joinedVideo);
             }
-            UploadVideo(video, originalVideo, watermarkVideo, joinedVideo);
+            //UploadVideo(video, originalVideo, watermarkVideo, joinedVideo);
+            await UploadToYoutube(video, originalVideo, watermarkVideo, joinedVideo);
         }
 
         private static void DeleteVideos(string[] videos)
@@ -244,7 +261,7 @@ namespace Dashboard.Utility
                 var introEnd = Path.Combine(AppDataPath, "IntroEnd.mp4");
                 var content = Path.Combine(AppDataPath, watermarkVideo);
                 var output = Path.Combine(AppDataPath, joinedVideo);
-                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0:0] [0:1] [1:0] [1:1] [2:0] [2:1] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");
+                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0]scale=1280x720,setdar=16/9[a];[1]scale=1280x720,setdar=16/9[b];[2]scale=1280x720,setdar=16/9[c]; [a][0:a][b][1:a][c][2:a] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");            
                 ffmpeg_StartInfo.UseShellExecute = false;
                 ffmpeg_StartInfo.RedirectStandardError = true;
                 ffmpeg_StartInfo.RedirectStandardOutput = true;
@@ -277,30 +294,112 @@ namespace Dashboard.Utility
             }
         }
 
-        private static void UploadVideo(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
+        //private static void UploadVideo(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
+        //{
+        //    UpdateVideo(video, Progress.Uploading, Status.Handling);
+
+        //    Account account = new Account(_cloudName, _apiKey, _apiSecret);
+
+        //    Cloudinary cloudinary = new Cloudinary(account);
+
+        //    var videoUploadParams = new VideoUploadParams()
+        //    {
+        //        File = new FileDescription(joinedVideo)
+        //    };
+        //    try
+        //    {
+        //        var result = cloudinary.Upload(videoUploadParams);
+        //        if (result.Error == null)
+        //        {
+        //            video.ReuploadedLink = result.Uri.AbsoluteUri;
+        //            UpdateVideo(video, Progress.Uploaded, Status.Completed);
+        //            DeleteVideos(new[] {originalVideo, watermarkVideo, joinedVideo});
+        //        }
+        //        else
+        //        {
+        //            UpdateVideo(video, Progress.Joined, Status.Failed, result.Error.Message);
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        var message = string.IsNullOrEmpty(ex.Message)
+        //            ? "Uploading failed"
+        //            : ex.Message;
+        //        UpdateVideo(video, Progress.Joined, Status.Failed, message);
+        //    }
+        //}
+
+        private static async Task UploadToYoutube(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
         {
-            UpdateVideo(video, Progress.Uploading, video.Status);
-
-            Account account = new Account(_cloudName, _apiKey, _apiSecret);
-
-            Cloudinary cloudinary = new Cloudinary(account);
-
-            var videoUploadParams = new VideoUploadParams()
-            {
-                File = new FileDescription(joinedVideo)
-            };
+            UpdateVideo(video, Progress.Uploading, Status.Handling);
             try
             {
-                var result = cloudinary.Upload(videoUploadParams);
-                if (result.Error == null)
+                var clientSecrets = new
                 {
-                    video.ReuploadedLink = result.Uri.AbsoluteUri;
-                    UpdateVideo(video, Progress.Uploaded, Status.Completed);
-                    DeleteVideos(new[] {originalVideo, watermarkVideo, joinedVideo});
+                    installed = new
+                    {
+                        client_id = _youtubeClientId,
+                        client_secret = _youtubeClientSecret
+                    }
+                };
+                File.WriteAllText(Path.Combine(AppDataPath, "client_secrets.json"), JsonConvert.SerializeObject(clientSecrets));
+
+                UserCredential credential;
+                using (var stream = new FileStream(Path.Combine(AppDataPath, "client_secrets.json"), FileMode.Open, FileAccess.Read))
+                {
+                    credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
+                        GoogleClientSecrets.Load(stream).Secrets,
+                        // This OAuth 2.0 access scope allows an application to upload files to the
+                        // authenticated user's YouTube channel, but doesn't allow other types of access.
+                        new[] { YouTubeService.Scope.YoutubeUpload },
+                        _youtubeUser,
+                        CancellationToken.None
+                    );
                 }
-                else
+
+                var youtubeService = new YouTubeService(new BaseClientService.Initializer()
                 {
-                    UpdateVideo(video, Progress.Joined, Status.Failed, result.Error.Message);
+                    HttpClientInitializer = credential,
+                    ApplicationName = Assembly.GetExecutingAssembly().GetName().Name
+                });
+
+                var youtubeVideo = new Google.Apis.YouTube.v3.Data.Video();
+                youtubeVideo.Snippet = new VideoSnippet();
+                youtubeVideo.Snippet.Title = video.VideoTitle;
+                youtubeVideo.Snippet.Description = video.Description;
+                youtubeVideo.Snippet.Tags = new string[] { "vui.us" };
+                //youtubeVideo.Snippet.CategoryId = "22"; // See https://developers.google.com/youtube/v3/docs/videoCategories/list
+                youtubeVideo.Status = new VideoStatus();
+                youtubeVideo.Status.PrivacyStatus = "public"; // or "private" or "public"
+                var filePath = joinedVideo; // Replace with path to actual movie file.
+
+                using (var fileStream = new FileStream(filePath, FileMode.Open))
+                {
+                    var videosInsertRequest = youtubeService.Videos.Insert(youtubeVideo, "snippet,status", fileStream, "video/*");
+                    videosInsertRequest.ProgressChanged += progress =>
+                    {
+                        switch (progress.Status)
+                        {
+                            case UploadStatus.Uploading:
+                                UpdateVideo(video, Progress.Uploading, Status.Handling, $"{progress.BytesSent} bytes sent.");
+                                Console.WriteLine("{0} bytes sent.", progress.BytesSent);
+                                break;
+
+                            case UploadStatus.Failed:
+                                UpdateVideo(video, Progress.Joined, Status.Failed, progress.Exception.Message);
+                                Console.WriteLine("An error prevented the upload from completing.\n{0}", progress.Exception);
+                                break;
+                        }
+                    };
+                    videosInsertRequest.ResponseReceived += response =>
+                    {
+                        video.ReuploadedLink = $"https://www.youtube.com/watch?v={response.Id}";
+                        UpdateVideo(video, Progress.Uploaded, Status.Completed);
+                        DeleteVideos(new[] { originalVideo, watermarkVideo, joinedVideo });
+                        Console.WriteLine("Video id '{0}' was successfully uploaded.", video.Id);
+                    };
+
+                    await videosInsertRequest.UploadAsync();
                 }
             }
             catch (Exception ex)

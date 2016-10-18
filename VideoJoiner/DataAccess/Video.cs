@@ -31,6 +31,8 @@ namespace VideoJoiner.DataAccess
 
         public string Note { get; set; }
 
+        public string Description { get; set; }
+
         public DateTime? CreatedDate { get; set; }
 
         public bool? IsDeleted { get; set; }
