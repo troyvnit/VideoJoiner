@@ -17,6 +17,38 @@
               </div>
             </div>
             <div class="control-group">
+              <label>Intro {{introMessage}}</label>
+              <div class="controls">
+                <div ngf-drop ngf-select ng-model="intro" class="drop-box"
+                     ngf-drag-over-class="'dragover'" ngf-multiple="false" ngf-allow-dir="true">Drop video file here or click to upload</div>
+                <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>Outro {{outroMessage}}</label>
+              <div class="controls">
+                <div ngf-drop ngf-select ng-model="outro" class="drop-box"
+                     ngf-drag-over-class="'dragover'" ngf-multiple="false" ngf-allow-dir="true">Drop video file here or click to upload</div>
+                <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>Logo {{logoMessage}}</label>
+              <div class="controls">
+                <div ngf-drop ngf-select ng-model="logo" class="drop-box"
+                     ngf-drag-over-class="'dragover'" ngf-multiple="false" ngf-allow-dir="true">Drop video file here or click to upload</div>
+                <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+              </div>
+            </div>
+            <div class="control-group">
+              <label>Import Video Links {{importMessage}}</label>
+              <div class="controls">
+                <div ngf-drop ngf-select ng-model="import" class="drop-box"
+                     ngf-drag-over-class="'dragover'" ngf-multiple="false" ngf-allow-dir="true">Drop video links file here or click to upload</div>
+                <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
+              </div>
+            </div>
+            <div class="control-group">
               <label></label>
               <div class="controls">
                 <button type="button" class="btn btn-primary" ng-click="saveSettings()">

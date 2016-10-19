@@ -235,13 +235,13 @@
     <Content Include="App_Data\ffmpeg.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="App_Data\IntroEnd.mp4">
+    <Content Include="App_Data\intro.mp4">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="App_Data\IntroStart.mp4">
+    <Content Include="App_Data\logo.png">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="App_Data\vui.png">
+    <Content Include="App_Data\outro.mp4">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Content\bootstrap-theme.css" />
@@ -352,6 +352,7 @@
     <Content Include="Scripts\angular.min.js" />
     <Content Include="Scripts\bootstrap.js" />
     <Content Include="Scripts\bootstrap.min.js" />
+    <Content Include="Scripts\ng-file-upload\ng-file-upload-all.min.js" />
     <Content Include="Scripts\VideoJoiner\app.js" />
     <Content Include="Scripts\VideoJoiner\Controllers\chartController.js" />
     <Content Include="Scripts\VideoJoiner\Controllers\settingController.js" />

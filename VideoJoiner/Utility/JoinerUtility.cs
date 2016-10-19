@@ -217,7 +217,7 @@ namespace Dashboard.Utility
                 var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
                 var content = Path.Combine(AppDataPath, originalVideo);
                 var output = Path.Combine(AppDataPath, watermarkVideo);
-                var logo = Path.Combine(AppDataPath, "vui.png");
+                var logo = Path.Combine(AppDataPath, "logo.png");
                 ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {content} -i {logo} -filter_complex \"overlay=main_w-overlay_w-10:10\" {output}");
                 ffmpeg_StartInfo.UseShellExecute = false;
                 ffmpeg_StartInfo.RedirectStandardError = true;
@@ -257,8 +257,8 @@ namespace Dashboard.Utility
             {
                 DeleteVideos(new[] {joinedVideo});
                 var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
-                var introStart = Path.Combine(AppDataPath, "IntroStart.mp4");
-                var introEnd = Path.Combine(AppDataPath, "IntroEnd.mp4");
+                var introStart = Path.Combine(AppDataPath, "intro.mp4");
+                var introEnd = Path.Combine(AppDataPath, "outro.mp4");
                 var content = Path.Combine(AppDataPath, watermarkVideo);
                 var output = Path.Combine(AppDataPath, joinedVideo);
                 ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0]scale=1280x720,setdar=16/9[a];[1]scale=1280x720,setdar=16/9[b];[2]scale=1280x720,setdar=16/9[c]; [a][0:a][b][1:a][c][2:a] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");            

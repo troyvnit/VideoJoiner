@@ -70,6 +70,10 @@ namespace VideoJoiner
             bundles.Add(new ScriptBundle("~/bundles/jquery-ui-js")
                 .IncludeDirectory("~/Scripts/Jquery-ui", "*.js"));
 
+            // Angular File Upload
+            bundles.Add(new ScriptBundle("~/bundles/ng-file-upload")
+                .Include("~/Scripts/ng-file-upload/ng-file-upload-all.min.js"));
+
             // SignalR files
             bundles.Add(new ScriptBundle("~/bundles/signalr")
             .Include("~/Scripts/jquery.signalR-2.2.1.min.js")
