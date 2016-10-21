@@ -19,6 +19,7 @@ using Dashboard.Models;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Services;
 using Google.Apis.Upload;
+using Google.Apis.Util.Store;
 using Google.Apis.YouTube.v3;
 using Google.Apis.YouTube.v3.Data;
 using Newtonsoft.Json;
@@ -353,7 +354,8 @@ namespace Dashboard.Utility
                         // authenticated user's YouTube channel, but doesn't allow other types of access.
                         new[] { YouTubeService.Scope.YoutubeUpload },
                         _youtubeUser,
-                        CancellationToken.None
+                        CancellationToken.None,
+                        new FileDataStore(AppDataPath)
                     );
                 }
 
