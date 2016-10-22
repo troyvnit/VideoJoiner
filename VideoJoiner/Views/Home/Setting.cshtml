@@ -43,7 +43,7 @@
             <div class="control-group">
               <label>Import Video Links {{importMessage}}</label>
               <div class="controls">
-                <div ngf-drop ngf-select ng-model="import" class="drop-box"
+                <div ngf-drop ngf-select ng-model="import" class="drop-box" ngf-pattern=".txt" accept=".txt"
                      ngf-drag-over-class="'dragover'" ngf-multiple="false" ngf-allow-dir="true">Drop video links file here or click to upload</div>
                 <div ngf-no-file-drop>File Drag/Drop is not supported for this browser</div>
               </div>

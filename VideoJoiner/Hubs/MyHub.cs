@@ -32,8 +32,20 @@ namespace VideoJoiner.Hubs
                          var settings = await db.Settings.ToListAsync();
                          var totalSetting = settings.FirstOrDefault(s => s.SettingKey == "TotalVideosPerSession");
                          var take = totalSetting != null ? int.Parse(totalSetting.SettingValue) : 2;
-                         var videos = await db.Videos.Where(v => v.Status != Status.Completed).Take(take).ToListAsync();
-                         JoinerUtility.Join(videos);
+                         var skip = 0;
+                         while (!_cts.IsCancellationRequested)
+                         {
+                             if (!db.Videos.Any(v => v.Status == Status.Handling))
+                             {
+                                 var videos = await db.Videos.Where(v => v.Status != Status.Completed).OrderBy(v => v.Status).Take(take).ToListAsync();
+                                 if (videos.Any())
+                                 {
+                                     skip += take;
+                                     JoinerUtility.Join(videos, _cts);
+                                 }
+                             }
+                             await Task.Delay(2000);
+                         }
                      }
                  }, _cts.Token);
             }
