@@ -41,7 +41,7 @@ namespace VideoJoiner.Hubs
                                  if (videos.Any())
                                  {
                                      skip += take;
-                                     JoinerUtility.Join(videos, _cts);
+                                     JoinerUtility.Join(videos);
                                  }
                              }
                              await Task.Delay(2000);
@@ -58,6 +58,7 @@ namespace VideoJoiner.Hubs
         public void StopVideoJoiner()
         {
             _cts?.Cancel();
+            JoinerUtility.StopJoin();
         }
     }
 }

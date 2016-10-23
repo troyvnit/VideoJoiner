@@ -44,8 +44,10 @@ namespace Dashboard.Utility
         private static string _youtubeClientSecret;
         private static string _youtubeUser;
         private static string _logoSize;
+        private static List<CancellationTokenSource> _ctsList = new List<CancellationTokenSource>();
+        private static List<Process> _processList = new List<Process>();
 
-        public static void Join(List<Video> videos, CancellationTokenSource cts)
+        public static void Join(List<Video> videos)
         {
             using (var db = new VideoJoinerContext())
             {
@@ -61,6 +63,8 @@ namespace Dashboard.Utility
             }
             foreach (var video in videos)
             {
+                var cts = new CancellationTokenSource();
+                _ctsList.Add(cts);
                 Task.Run(async () =>
                 {
                     try
@@ -86,7 +90,7 @@ namespace Dashboard.Utility
 
                             if (video.Progress >= Progress.Downloaded && File.Exists(Path.Combine(AppDataPath, originalVideo)))
                             {
-                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, cts);
+                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
                                 return;
                             }
 
@@ -105,7 +109,7 @@ namespace Dashboard.Utility
                             videoDownloader.DownloadFinished += async (sender, eventArgs) =>
                             {
                                 UpdateVideo(video, Progress.Downloaded, Status.Handling);
-                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, cts);
+                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
                                 cts.Cancel();
                             };
 
@@ -128,8 +132,9 @@ namespace Dashboard.Utility
 
                                     if (result.Error == null)
                                     {
-                                        video.VideoTitle = !string.IsNullOrEmpty(result.Title) ? result.Title : $"video_{Guid.NewGuid()}";
-                                        video.Description = result.Description;
+                                        var title = !string.IsNullOrEmpty(result.Title) ? result.Title : !string.IsNullOrEmpty(result.Description) ? result.Description : $"video_{Guid.NewGuid()}";
+                                        video.VideoTitle = Regex.Replace(title, "[\\n\\r<>]+", "");
+                                        video.Description = Regex.Replace(result.Description, "[<>]+", ""); 
 
                                         originalVideo = Path.Combine($"{video.VideoTitle.GenerateSlug()}.mp4");
 
@@ -139,7 +144,7 @@ namespace Dashboard.Utility
 
                                         if (video.Progress >= Progress.Downloaded && File.Exists(Path.Combine(AppDataPath, originalVideo)))
                                         {
-                                            await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, cts);
+                                            await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
                                             return;
                                         }
 
@@ -149,7 +154,7 @@ namespace Dashboard.Utility
                                         webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(async (sender, args) =>
                                             {
                                                 UpdateVideo(video, Progress.Downloaded, Status.Handling);
-                                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, cts);
+                                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
                                                 cts.Cancel();
                                             });
                                     }
@@ -174,15 +179,15 @@ namespace Dashboard.Utility
             }
         }
 
-        private static async Task RunProcesses(Video video, string originalVideo, string watermarkVideo, string joinedVideo, CancellationTokenSource cts)
+        private static async Task RunProcesses(Video video, string originalVideo, string watermarkVideo, string joinedVideo, List<Process> processes)
         {
             if (!(video.Progress >= Progress.Joined && File.Exists(Path.Combine(AppDataPath, joinedVideo))))
             {
                 UpdateVideo(video, Progress.Joining, Status.Handling);
-                await MakeWatermark(video, originalVideo, watermarkVideo, cts);
-                await Concat(video, originalVideo, watermarkVideo, joinedVideo, cts);
+                MakeWatermark(video, originalVideo, watermarkVideo, processes);
+                Concat(video, watermarkVideo, joinedVideo, processes);
             }
-            await UploadToYoutube(video, originalVideo, watermarkVideo, joinedVideo, cts);
+            await UploadToYoutube(video, originalVideo, watermarkVideo, joinedVideo);
             //UploadVideo(video, originalVideo, watermarkVideo, joinedVideo);
         }
 
@@ -204,13 +209,14 @@ namespace Dashboard.Utility
             }
         }
 
-        private static async Task MakeWatermark(Video video, string originalVideo, string watermarkVideo, CancellationTokenSource cts)
+        private static void MakeWatermark(Video video, string originalVideo, string watermarkVideo, List<Process> processes)
         {
             Process ffmpegProcess = new Process();
+            processes.Add(ffmpegProcess);
             try
             {
                 var error = "";
-                DeleteVideos(new[] {watermarkVideo});
+                DeleteVideos(new[] { watermarkVideo });
                 var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
                 var content = Path.Combine(originalVideo);
                 var output = Path.Combine(watermarkVideo);
@@ -239,6 +245,7 @@ namespace Dashboard.Utility
                 ffmpegProcess.WaitForExit();
                 ffmpegProcess.Close();
                 ffmpegProcess.Dispose();
+                processes.Remove(ffmpegProcess);
                 ffmpegProcess = null;
                 UpdateVideo(video, Progress.Joining, Status.Handling, error);
             }
@@ -251,19 +258,20 @@ namespace Dashboard.Utility
             }
         }
 
-        private static async Task Concat(Video video, string originalVideo, string watermarkVideo, string joinedVideo, CancellationTokenSource cts)
+        private static void Concat(Video video, string watermarkVideo, string joinedVideo, List<Process> processes)
         {
             Process ffmpegProcess = new Process();
+            processes.Add(ffmpegProcess);
             try
             {
                 var error = "";
-                DeleteVideos(new[] {joinedVideo});
+                DeleteVideos(new[] { joinedVideo });
                 var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
                 var introStart = Path.Combine(AppDataPath, "intro.mp4");
                 var introEnd = Path.Combine(AppDataPath, "outro.mp4");
                 var content = Path.Combine(AppDataPath, watermarkVideo);
                 var output = Path.Combine(AppDataPath, joinedVideo);
-                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0]scale=1280x720,setdar=16/9[a];[1]scale=1280x720,setdar=16/9[b];[2]scale=1280x720,setdar=16/9[c]; [a][0:a][b][1:a][c][2:a] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");            
+                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0]scale=1280x720,setdar=16/9[a];[1]scale=1280x720,setdar=16/9[b];[2]scale=1280x720,setdar=16/9[c]; [a][0:a][b][1:a][c][2:a] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");
                 ffmpeg_StartInfo.UseShellExecute = false;
                 ffmpeg_StartInfo.RedirectStandardError = true;
                 ffmpeg_StartInfo.RedirectStandardOutput = true;
@@ -285,6 +293,7 @@ namespace Dashboard.Utility
                 ffmpegProcess.WaitForExit();
                 ffmpegProcess.Close();
                 ffmpegProcess.Dispose();
+                processes.Remove(ffmpegProcess);
                 ffmpegProcess = null;
                 UpdateVideo(video, Progress.Joined, Status.Handling, error);
             }
@@ -332,7 +341,7 @@ namespace Dashboard.Utility
         //    }
         //}
 
-        private static async Task UploadToYoutube(Video video, string originalVideo, string watermarkVideo, string joinedVideo, CancellationTokenSource cts)
+        private static async Task UploadToYoutube(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
         {
             UpdateVideo(video, Progress.Uploading, Status.Handling);
             try
@@ -412,6 +421,25 @@ namespace Dashboard.Utility
                     ? "Uploading failed"
                     : ex.Message;
                 UpdateVideo(video, Progress.Joined, Status.Failed, message);
+            }
+        }
+
+        public static void StopJoin()
+        {
+            foreach (var cts in _ctsList)
+            {
+                cts.Cancel();
+            }
+
+            foreach (var process in _processList)
+            {
+                process.Close();
+                process.Dispose();
+            }
+
+            if (_processList.Count > 0)
+            {
+                _processList.RemoveRange(0, _processList.Count);
             }
         }
 
