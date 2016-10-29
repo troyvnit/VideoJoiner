@@ -37,7 +37,7 @@ namespace VideoJoiner.Hubs
                          {
                              if (!db.Videos.Any(v => v.Status == Status.Handling))
                              {
-                                 var videos = await db.Videos.Where(v => v.Status != Status.Completed).OrderBy(v => v.Status).Take(take).ToListAsync();
+                                 var videos = await db.Videos.Where(v => v.Status != Status.Completed && v.Progress != Progress.Joined).OrderBy(v => v.Status).Take(take).ToListAsync();
                                  if (videos.Any())
                                  {
                                      skip += take;

@@ -378,8 +378,8 @@ namespace Dashboard.Utility
 
                 var youtubeVideo = new Google.Apis.YouTube.v3.Data.Video();
                 youtubeVideo.Snippet = new VideoSnippet();
-                youtubeVideo.Snippet.Title = video.VideoTitle;
-                youtubeVideo.Snippet.Description = video.Description;
+                youtubeVideo.Snippet.Title = video.VideoTitle.Length > 100 ? video.VideoTitle.Substring(0, 100) : video.VideoTitle;
+                youtubeVideo.Snippet.Description = video.Description.Length > 5000 ? video.Description.Substring(0, 5000) : video.Description;
                 youtubeVideo.Snippet.Tags = new string[] { "vui.us" };
                 //youtubeVideo.Snippet.CategoryId = "22"; // See https://developers.google.com/youtube/v3/docs/videoCategories/list
                 youtubeVideo.Status = new VideoStatus();
