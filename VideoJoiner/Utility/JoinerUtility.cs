@@ -57,7 +57,7 @@ namespace Dashboard.Utility
                 //_apiKey = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiKey")?.SettingValue;
                 //_apiSecret = settings.FirstOrDefault(s => s.SettingKey == "CloudinaryApiSecret")?.SettingValue;
                 _youtubeClientId = settings.FirstOrDefault(s => s.SettingKey == "YoutubeClientId")?.SettingValue;
-                _youtubeClientSecret = settings.FirstOrDefault(s => s.SettingKey == "YoutubeClientSecret")?.SettingValue; 
+                _youtubeClientSecret = settings.FirstOrDefault(s => s.SettingKey == "YoutubeClientSecret")?.SettingValue;
                 _youtubeUser = settings.FirstOrDefault(s => s.SettingKey == "YoutubeUser")?.SettingValue;
                 _logoSize = settings.FirstOrDefault(s => s.SettingKey == "LogoSize")?.SettingValue;
             }
@@ -88,7 +88,8 @@ namespace Dashboard.Utility
 
                             joinedVideo = Path.Combine($"{videoInfo.Title.GenerateSlug()}_Joined.mp4");
 
-                            if (video.Progress >= Progress.Downloaded && File.Exists(Path.Combine(AppDataPath, originalVideo)))
+                            if (video.Progress >= Progress.Downloaded &&
+                                File.Exists(Path.Combine(AppDataPath, originalVideo)))
                             {
                                 await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
                                 return;
@@ -101,7 +102,8 @@ namespace Dashboard.Utility
                                 DownloadUrlResolver.DecryptDownloadUrl(videoInfo);
                             }
 
-                            var videoDownloader = new VideoDownloader(videoInfo, Path.Combine(AppDataPath, originalVideo));
+                            var videoDownloader = new VideoDownloader(videoInfo,
+                                Path.Combine(AppDataPath, originalVideo));
 
                             videoDownloader.DownloadProgressChanged +=
                                 (sender, a) => System.Console.WriteLine(a.ProgressPercentage);
@@ -119,10 +121,13 @@ namespace Dashboard.Utility
                         {
                             using (var webClient = new WebClient())
                             {
-                                var fbVideoMatch = Regex.Match(video.SourceLink, "https?:\\/\\/(?:www\\.)?facebook\\.(?:[a-z]+)\\/(?:(?:(?:[^/]+)\\/(?:[^/]+)\\/([^/]+))|(?:video\\.php\\?v=(\\d+)))");
+                                var fbVideoMatch = Regex.Match(video.SourceLink,
+                                    "https?:\\/\\/(?:www\\.)?facebook\\.(?:[a-z]+)\\/(?:(?:(?:[^/]+)\\/(?:[^/]+)\\/([^/]+))|(?:video\\.php\\?v=(\\d+)))");
                                 if (fbVideoMatch.Success)
                                 {
-                                    var fbVideoId = !string.IsNullOrEmpty(fbVideoMatch.Groups[2].Value) ? fbVideoMatch.Groups[2].Value : fbVideoMatch.Groups[1].Value;
+                                    var fbVideoId = !string.IsNullOrEmpty(fbVideoMatch.Groups[2].Value)
+                                        ? fbVideoMatch.Groups[2].Value
+                                        : fbVideoMatch.Groups[1].Value;
 
                                     var resultString =
                                         webClient.DownloadString(
@@ -132,9 +137,13 @@ namespace Dashboard.Utility
 
                                     if (result.Error == null)
                                     {
-                                        var title = !string.IsNullOrEmpty(result.Title) ? result.Title : !string.IsNullOrEmpty(result.Description) ? result.Description : $"video_{Guid.NewGuid()}";
+                                        var title = !string.IsNullOrEmpty(result.Title)
+                                            ? result.Title
+                                            : !string.IsNullOrEmpty(result.Description)
+                                                ? result.Description
+                                                : $"video_{Guid.NewGuid()}";
                                         video.VideoTitle = Regex.Replace(title, "[\\n\\r<>]+", "");
-                                        video.Description = Regex.Replace(result.Description, "[<>]+", ""); 
+                                        video.Description = Regex.Replace(result.Description, "[<>]+", "");
 
                                         originalVideo = Path.Combine($"{video.VideoTitle.GenerateSlug()}.mp4");
 
@@ -142,19 +151,26 @@ namespace Dashboard.Utility
 
                                         joinedVideo = Path.Combine($"{video.VideoTitle.GenerateSlug()}_Joined.mp4");
 
-                                        if (video.Progress >= Progress.Downloaded && File.Exists(Path.Combine(AppDataPath, originalVideo)))
+                                        if (video.Progress >= Progress.Downloaded &&
+                                            File.Exists(Path.Combine(AppDataPath, originalVideo)))
                                         {
-                                            await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
+                                            await
+                                                RunProcesses(video, originalVideo, watermarkVideo, joinedVideo,
+                                                    _processList);
                                             return;
                                         }
 
                                         UpdateVideo(video, Progress.Downloading, Status.Handling);
 
-                                        webClient.DownloadFileAsync(new Uri(result.Source), Path.Combine(AppDataPath, originalVideo));
-                                        webClient.DownloadFileCompleted += new AsyncCompletedEventHandler(async (sender, args) =>
+                                        webClient.DownloadFileAsync(new Uri(result.Source),
+                                            Path.Combine(AppDataPath, originalVideo));
+                                        webClient.DownloadFileCompleted +=
+                                            new AsyncCompletedEventHandler(async (sender, args) =>
                                             {
                                                 UpdateVideo(video, Progress.Downloaded, Status.Handling);
-                                                await RunProcesses(video, originalVideo, watermarkVideo, joinedVideo, _processList);
+                                                await
+                                                    RunProcesses(video, originalVideo, watermarkVideo, joinedVideo,
+                                                        _processList);
                                                 cts.Cancel();
                                             });
                                     }
@@ -179,7 +195,8 @@ namespace Dashboard.Utility
             }
         }
 
-        private static async Task RunProcesses(Video video, string originalVideo, string watermarkVideo, string joinedVideo, List<Process> processes)
+        private static async Task RunProcesses(Video video, string originalVideo, string watermarkVideo,
+            string joinedVideo, List<Process> processes)
         {
             if (!(video.Progress >= Progress.Joined && File.Exists(Path.Combine(AppDataPath, joinedVideo))))
             {
@@ -209,20 +226,24 @@ namespace Dashboard.Utility
             }
         }
 
-        private static void MakeWatermark(Video video, string originalVideo, string watermarkVideo, List<Process> processes)
+        private static void MakeWatermark(Video video, string originalVideo, string watermarkVideo,
+            List<Process> processes)
         {
             Process ffmpegProcess = new Process();
             processes.Add(ffmpegProcess);
             try
             {
                 var error = "";
-                DeleteVideos(new[] { watermarkVideo });
+                DeleteVideos(new[] {watermarkVideo});
                 var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
                 var content = Path.Combine(originalVideo);
                 var output = Path.Combine(watermarkVideo);
                 var logo = Path.Combine("logo.png");
-                var logoSize = _logoSize.Contains("%") ? $"iw*{(double.Parse(_logoSize.Replace("%", "")) / 100):F}:ih*{(double.Parse(_logoSize.Replace("%", "")) / 100):F}" : _logoSize;
-                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {content} -vf \"movie='{logo}' [watermark]; [in]scale=1280x720 [scale]; [watermark]scale={logoSize} [watermarkscale]; [scale][watermarkscale] overlay=main_w-overlay_w-10:10 [out]\" {output}");
+                var logoSize = _logoSize.Contains("%")
+                    ? $"iw*{(double.Parse(_logoSize.Replace("%", ""))/100):F}:ih*{(double.Parse(_logoSize.Replace("%", ""))/100):F}"
+                    : _logoSize;
+                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg,
+                    $" -i {content} -vf \"movie='{logo}' [watermark]; [in]scale=1280x720 [scale]; [watermark]scale={logoSize} [watermarkscale]; [scale][watermarkscale] overlay=main_w-overlay_w-10:10 [out]\" {output}");
                 ffmpeg_StartInfo.WorkingDirectory = Path.Combine(AppDataPath);
                 ffmpeg_StartInfo.UseShellExecute = false;
                 ffmpeg_StartInfo.RedirectStandardError = true;
@@ -265,13 +286,14 @@ namespace Dashboard.Utility
             try
             {
                 var error = "";
-                DeleteVideos(new[] { joinedVideo });
+                DeleteVideos(new[] {joinedVideo});
                 var ffmpeg = Path.Combine(AppDataPath, "ffmpeg.exe");
                 var introStart = Path.Combine(AppDataPath, "intro.mp4");
                 var introEnd = Path.Combine(AppDataPath, "outro.mp4");
                 var content = Path.Combine(AppDataPath, watermarkVideo);
                 var output = Path.Combine(AppDataPath, joinedVideo);
-                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg, $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0]scale=1280x720,setdar=16/9[a];[1]scale=1280x720,setdar=16/9[b];[2]scale=1280x720,setdar=16/9[c]; [a][0:a][b][1:a][c][2:a] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");
+                ProcessStartInfo ffmpeg_StartInfo = new ProcessStartInfo(ffmpeg,
+                    $" -i {introStart} -i {content} -i {introEnd} -filter_complex \"[0]scale=1280x720,setdar=16/9[a];[1]scale=1280x720,setdar=16/9[b];[2]scale=1280x720,setdar=16/9[c]; [a][0:a][b][1:a][c][2:a] concat=n=3:v=1:a=1 [v] [a1]\" -map \"[v]\" -map \"[a1]\" {output}");
                 ffmpeg_StartInfo.UseShellExecute = false;
                 ffmpeg_StartInfo.RedirectStandardError = true;
                 ffmpeg_StartInfo.RedirectStandardOutput = true;
@@ -341,7 +363,8 @@ namespace Dashboard.Utility
         //    }
         //}
 
-        private static async Task UploadToYoutube(Video video, string originalVideo, string watermarkVideo, string joinedVideo)
+        private static async Task UploadToYoutube(Video video, string originalVideo, string watermarkVideo,
+            string joinedVideo)
         {
             UpdateVideo(video, Progress.Uploading, Status.Handling);
             try
@@ -354,16 +377,19 @@ namespace Dashboard.Utility
                         client_secret = _youtubeClientSecret
                     }
                 };
-                File.WriteAllText(Path.Combine(AppDataPath, "client_secrets.json"), JsonConvert.SerializeObject(clientSecrets));
+                File.WriteAllText(Path.Combine(AppDataPath, "client_secrets.json"),
+                    JsonConvert.SerializeObject(clientSecrets));
 
                 UserCredential credential;
-                using (var stream = new FileStream(Path.Combine(AppDataPath, "client_secrets.json"), FileMode.Open, FileAccess.Read))
+                using (
+                    var stream = new FileStream(Path.Combine(AppDataPath, "client_secrets.json"), FileMode.Open,
+                        FileAccess.Read))
                 {
                     credential = await GoogleWebAuthorizationBroker.AuthorizeAsync(
                         GoogleClientSecrets.Load(stream).Secrets,
                         // This OAuth 2.0 access scope allows an application to upload files to the
                         // authenticated user's YouTube channel, but doesn't allow other types of access.
-                        new[] { YouTubeService.Scope.YoutubeUpload },
+                        new[] {YouTubeService.Scope.YoutubeUpload},
                         _youtubeUser,
                         CancellationToken.None,
                         new FileDataStore(AppDataPath)
@@ -378,9 +404,13 @@ namespace Dashboard.Utility
 
                 var youtubeVideo = new Google.Apis.YouTube.v3.Data.Video();
                 youtubeVideo.Snippet = new VideoSnippet();
-                youtubeVideo.Snippet.Title = video.VideoTitle.Length > 100 ? video.VideoTitle.Substring(0, 100) : video.VideoTitle;
-                youtubeVideo.Snippet.Description = video.Description.Length > 5000 ? video.Description.Substring(0, 5000) : video.Description;
-                youtubeVideo.Snippet.Tags = new string[] { "vui.us" };
+                youtubeVideo.Snippet.Title = video.VideoTitle.Length > 100
+                    ? video.VideoTitle.Substring(0, 100)
+                    : video.VideoTitle;
+                youtubeVideo.Snippet.Description = video.Description.Length > 5000
+                    ? video.Description.Substring(0, 5000)
+                    : video.Description;
+                youtubeVideo.Snippet.Tags = new string[] {"vui.us"};
                 //youtubeVideo.Snippet.CategoryId = "22"; // See https://developers.google.com/youtube/v3/docs/videoCategories/list
                 youtubeVideo.Status = new VideoStatus();
                 youtubeVideo.Status.PrivacyStatus = "public"; // or "private" or "public"
@@ -388,19 +418,22 @@ namespace Dashboard.Utility
 
                 using (var fileStream = new FileStream(filePath, FileMode.Open))
                 {
-                    var videosInsertRequest = youtubeService.Videos.Insert(youtubeVideo, "snippet,status", fileStream, "video/*");
+                    var videosInsertRequest = youtubeService.Videos.Insert(youtubeVideo, "snippet,status", fileStream,
+                        "video/*");
                     videosInsertRequest.ProgressChanged += progress =>
                     {
                         switch (progress.Status)
                         {
                             case UploadStatus.Uploading:
-                                UpdateVideo(video, Progress.Uploading, Status.Handling, $"{progress.BytesSent} bytes sent.");
+                                UpdateVideo(video, Progress.Uploading, Status.Handling,
+                                    $"{progress.BytesSent} bytes sent.");
                                 Console.WriteLine("{0} bytes sent.", progress.BytesSent);
                                 break;
 
                             case UploadStatus.Failed:
                                 UpdateVideo(video, Progress.Joined, Status.Failed, progress.Exception.Message);
-                                Console.WriteLine("An error prevented the upload from completing.\n{0}", progress.Exception);
+                                Console.WriteLine("An error prevented the upload from completing.\n{0}",
+                                    progress.Exception);
                                 break;
                         }
                     };
@@ -408,7 +441,26 @@ namespace Dashboard.Utility
                     {
                         video.ReuploadedLink = $"https://www.youtube.com/watch?v={response.Id}";
                         UpdateVideo(video, Progress.Uploaded, Status.Completed);
-                        DeleteVideos(new[] { originalVideo, watermarkVideo, joinedVideo });
+                        DeleteVideos(new[] {originalVideo, watermarkVideo, joinedVideo});
+                        try
+                        {
+                            using (var httpClient = new HttpClient())
+                            {
+                                using (var db = new VideoJoinerContext())
+                                {
+                                    var postVideoIdUrlSetting =
+                                        db.Settings.FirstOrDefault(s => s.SettingKey == "PostVideoIdUrl");
+                                    if (postVideoIdUrlSetting != null)
+                                    {
+                                        httpClient.PostAsync(string.Format(postVideoIdUrlSetting.SettingValue, video.Id), null);
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception)
+                        {
+                            // ignored
+                        }
                         Console.WriteLine("Video id '{0}' was successfully uploaded.", video.Id);
                     };
 
