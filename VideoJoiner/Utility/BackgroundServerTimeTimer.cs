@@ -24,7 +24,7 @@ namespace VideoJoiner
             HostingEnvironment.RegisterObject(this);
             _hubContext = GlobalHost.ConnectionManager.GetHubContext<MyHub>();
             _timer = new Timer(OnTimerElapsed, null,TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(5));
-            _sendEmailtTimer = new Timer(OnSendEmailTimerElapsed, null, TimeSpan.FromSeconds(1), TimeSpan.FromMinutes(1));
+            _sendEmailtTimer = new Timer(OnSendEmailTimerElapsed, null, TimeSpan.FromSeconds(1), TimeSpan.FromHours(12));
         }
 
         private void OnTimerElapsed(object sender)

@@ -1,6 +1,7 @@
 ﻿var videoController = function ($scope, signalRHubProxy) {
 
     $scope.running = false;
+    $scope.loaded = false;
 
     var clientPushHubProxy = signalRHubProxy(
        signalRHubProxy.defaultServer, 'MyHub',
@@ -8,7 +9,8 @@
 
     clientPushHubProxy.on('videoJoinerInfos', function (data) {
         $scope.VideoJoinerInfos = data;
-        var x = clientPushHubProxy.connection.id;
+        $scope.running = data.Running;
+        $scope.loaded = true;
     });
 
     $scope.startVideoJoiner = function () {

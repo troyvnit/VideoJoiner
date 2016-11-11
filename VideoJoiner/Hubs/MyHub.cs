@@ -30,6 +30,9 @@ namespace VideoJoiner.Hubs
                      using (var db = new VideoJoinerContext())
                      {
                          var settings = await db.Settings.ToListAsync();
+                         var runningSetting = settings.FirstOrDefault(s => s.SettingKey == "Running");
+                         if (runningSetting != null) runningSetting.SettingValue = true.ToString();
+                         db.SaveChanges();
                          var totalSetting = settings.FirstOrDefault(s => s.SettingKey == "TotalVideosPerSession");
                          var take = totalSetting != null ? int.Parse(totalSetting.SettingValue) : 2;
                          var skip = 0;

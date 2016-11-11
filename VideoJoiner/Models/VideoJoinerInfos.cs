@@ -12,6 +12,7 @@ namespace Dashboard.Models
         public int TotalUnhandledVideos { get; set; }
         public int TotalFailedVideos { get; set; }
         public int TotalCompletedVideos { get; set; }
+        public bool Running { get; set; }
 
         public List<Video> Videos { get; set; }
     }

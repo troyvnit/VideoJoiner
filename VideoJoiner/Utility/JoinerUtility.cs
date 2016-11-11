@@ -402,6 +402,8 @@ namespace Dashboard.Utility
                     ApplicationName = Assembly.GetExecutingAssembly().GetName().Name
                 });
 
+                youtubeService.HttpClient.Timeout = TimeSpan.FromHours(1);
+
                 var youtubeVideo = new Google.Apis.YouTube.v3.Data.Video();
                 youtubeVideo.Snippet = new VideoSnippet();
                 youtubeVideo.Snippet.Title = video.VideoTitle.Length > 100
@@ -420,6 +422,7 @@ namespace Dashboard.Utility
                 {
                     var videosInsertRequest = youtubeService.Videos.Insert(youtubeVideo, "snippet,status", fileStream,
                         "video/*");
+                    videosInsertRequest.ChunkSize = 4*256*0x400;
                     videosInsertRequest.ProgressChanged += progress =>
                     {
                         switch (progress.Status)
@@ -492,6 +495,13 @@ namespace Dashboard.Utility
             if (_processList.Count > 0)
             {
                 _processList.RemoveRange(0, _processList.Count);
+            }
+
+            using (var db = new VideoJoinerContext())
+            {
+                var runningSetting = db.Settings.FirstOrDefault(s => s.SettingKey == "Running");
+                if (runningSetting != null) runningSetting.SettingValue = false.ToString();
+                db.SaveChanges();
             }
         }
 

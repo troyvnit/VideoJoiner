@@ -113,6 +113,8 @@ namespace VideoJoiner.Utility
                 videoJoinerInfos.TotalFailedVideos = videos.Count(v => v.Status == Status.Failed);
                 videoJoinerInfos.TotalCompletedVideos = videos.Count(v => v.Status == Status.Completed);
                 videoJoinerInfos.Videos = videos.Where(v => v.Status != Status.Completed).ToList();
+                videoJoinerInfos.Running =
+                    db.Settings.Any(s => s.SettingKey == "Running" && s.SettingValue == true.ToString());
             }
             return videoJoinerInfos;
         }
